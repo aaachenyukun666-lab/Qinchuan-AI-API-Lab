@@ -1,0 +1,32 @@
+/* ==========================================================================
+   AI Relay Meter - self-hosted Inter (SF Pro substitute)
+   Source: https://github.com/rsms/inter  ·  License: SIL OFL 1.1
+   See assets/fonts/LICENSE-Inter.txt. Files are subset to the four weights
+   the UI uses (400/500/600/700) so the Android WebView renders identically
+   offline; on Apple platforms the system stack resolves to real SF Pro first.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../assets/fonts/Inter-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../../assets/fonts/Inter-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../../assets/fonts/Inter-SemiBold.woff2') format('woff2');
+}
+

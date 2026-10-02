@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="AI Relay Meter - measure real API Token usage and verify relay billing with small, repeatable requests.">
+<title>AI Relay Meter</title>
+<link rel="preload" href="assets/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Inter-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="src/css/fonts.css">
+<link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="blur-slices" aria-hidden="true">
+    <div class="slice"></div>
+    <div class="slice"></div>
+    <div class="slice"></div>
+  </div>
+  <div class="masthead-inner">
+    <div class="brand">
+      <h1 data-i18n="app.name">AI Relay Meter</h1>
+      <p data-i18n="app.subtitle">AI API Token Meter &amp; Relay Verification Tool</p>
+    </div>
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button type="button" id="langZh" data-locale="zh-CN">中文</button>
+      <button type="button" id="langEn" data-locale="en-US">EN</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="hero">
+    <h2 data-i18n="app.name">AI Relay Meter</h2>
+    <p data-i18n="app.tagline"></p>
+  </div>
+
+  <!-- ============================================ API Configuration ==== -->
+  <section class="card" id="cardConfig">
+    <h3 data-i18n="section.apiConfig">API Configuration</h3>
+
+    <div class="field">
+      <label for="baseUrl" data-i18n="form.baseUrl">Base URL</label>
+      <input type="text" id="baseUrl" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false"
+             data-i18n-attr="placeholder:form.baseUrlPlaceholder">
+    </div>
+
+    <div class="field">
+      <label for="apiKey" data-i18n="form.apiKey">API Key</label>
+      <input type="password" id="apiKey" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false"
+             data-i18n-attr="placeholder:form.apiKeyPlaceholder">
+      <div class="hint" id="keyHint"></div>
+    </div>
+
+    <div class="field">
+      <label for="model" data-i18n="form.model">Model</label>
+      <input type="text" id="model" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false"
+             data-i18n-attr="placeholder:form.modelPlaceholder">
+      <div class="btn-group" style="margin-top:8px">
+        <button type="button" class="btn-ghost" id="btnGetModels" data-i18n="form.getModels">Get Models</button>
+      </div>
+      <div class="chips" id="modelChips"></div>
+      <div class="hint" id="modelStatus"></div>
+    </div>
+
+    <label class="inline" for="rememberKey">
+      <input type="checkbox" id="rememberKey">
+      <span data-i18n="form.rememberKey">Remember API Key on this device</span>
+    </label>
+  </section>
+
+  <!-- ================================================= Test Mode ====== -->
+  <section class="card">
+    <h3 data-i18n="section.testMode">Test Mode</h3>
+    <div class="modes" id="modePicker">
+      <label class="mode-option" data-mode="verification">
+        <input type="radio" name="mode" value="verification" checked>
+        <span>
+          <span class="mode-name" data-i18n="mode.verification">Small-scale Verification</span>
+          <span class="mode-desc" data-i18n="mode.verificationDesc"></span>
+        </span>
+      </label>
+      <label class="mode-option" data-mode="usage">
+        <input type="radio" name="mode" value="usage">
+        <span>
+          <span class="mode-name" data-i18n="mode.usage">Token Usage Test</span>
+          <span class="mode-desc" data-i18n="mode.usageDesc"></span>
+        </span>
+      </label>
+    </div>
+  </section>
+
+  <!-- =========================================== Test Parameters ====== -->
+  <section class="card">
+    <h3 data-i18n="section.testParameters">Test Parameters</h3>
+
+    <div class="row">
+      <div class="field">
+        <label for="requests" data-i18n="form.requests">Requests</label>
+        <input type="number" id="requests" min="1" max="500" step="1" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="maxTokens" data-i18n="form.maxTokens">Max Tokens</label>
+        <input type="number" id="maxTokens" min="1" max="32768" step="1" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="concurrency" data-i18n="form.concurrency">Concurrency</label>
+        <input type="number" id="concurrency" min="1" max="16" step="1" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="timeoutSec" data-i18n="form.timeout">Timeout (s)</label>
+        <input type="number" id="timeoutSec" min="5" max="1800" step="5" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="prompt" data-i18n="form.prompt">Prompt</label>
+      <textarea id="prompt" rows="3"></textarea>
+    </div>
+
+    <label class="inline" for="stream">
+      <input type="checkbox" id="stream">
+      <span data-i18n="form.stream">Streaming (SSE)</span>
+    </label>
+
+    <div class="btn-group" style="margin-top:14px">
+      <button type="button" class="btn-ghost" id="btnToggleAdvanced" data-i18n="action.showAdvanced">Advanced options</button>
+    </div>
+
+    <!-- ------------------------------------------- advanced options -->
+    <div id="advanced" class="hidden" style="margin-top:16px">
+      <div class="row">
+        <div class="field">
+          <label for="repeat" data-i18n="form.repeat">Repeat runs</label>
+          <select id="repeat">
+            <option value="1">1</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="accountUnit" data-i18n="form.accountUnit">Account usage unit</label>
+          <select id="accountUnit">
+            <option value="currency" data-i18n="form.unitCurrency">Currency</option>
+            <option value="tokens" data-i18n="form.unitTokens">Tokens</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="balanceBefore" data-i18n="form.balanceBefore">Balance before</label>
+          <input type="number" id="balanceBefore" step="any" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="balanceAfter" data-i18n="form.balanceAfter">Balance after</label>
+          <input type="number" id="balanceAfter" step="any" inputmode="decimal">
+        </div>
+      </div>
+      <div class="hint" style="margin:-6px 0 14px" data-i18n="form.balanceHint"></div>
+
+      <div class="row">
+        <div class="field">
+          <label for="priceInput" data-i18n="form.priceInput">Input price / 1K tokens</label>
+          <input type="number" id="priceInput" step="any" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label for="priceOutput" data-i18n="form.priceOutput">Output price / 1K tokens</label>
+          <input type="number" id="priceOutput" step="any" inputmode="decimal">
+        </div>
+      </div>
+      <div class="hint" style="margin:-6px 0 14px" data-i18n="form.priceHint"></div>
+
+      <div class="field">
+        <label for="tolerance" data-i18n="form.tolerance">Tolerance (%)</label>
+        <input type="number" id="tolerance" step="0.1" min="0" max="100" inputmode="decimal">
+        <div class="hint" data-i18n="form.toleranceHint"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== Actions ====== -->
+  <section class="card">
+    <div class="actions" style="margin-top:0">
+      <button type="button" class="btn-secondary" id="btnTestOne" data-i18n="action.testRequest">Send One Test Request</button>
+      <button type="button" class="btn-primary" id="btnStart" data-i18n="action.startTest">Start Test</button>
+      <button type="button" class="btn-danger hidden" id="btnStop" data-i18n="action.stopTest">Stop Test</button>
+      <button type="button" class="btn-secondary hidden" id="btnReset" data-i18n="action.reset">Reset</button>
+    </div>
+    <div class="progress-track" id="progressTrack" style="display:none">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="status-line" id="statusLine"></div>
+  </section>
+
+  <!-- ================================================ Live Result ====== -->
+  <section class="card hidden" id="cardLive">
+    <h3 data-i18n="live.title">Live Result</h3>
+    <div class="stats">
+      <div class="stat emphasis">
+        <div class="stat-label" data-i18n="live.totalTokens">Total Tokens</div>
+        <div class="stat-value" id="statTokens">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="live.requests">Requests</div>
+        <div class="stat-value" id="statRequests">0 / 0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="live.success">Succeeded</div>
+        <div class="stat-value" id="statSuccess">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="live.failed">Failed</div>
+        <div class="stat-value" id="statFailed">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="live.avgLatency">Avg latency</div>
+        <div class="stat-value" id="statLatency">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="live.duration">Duration</div>
+        <div class="stat-value" id="statDuration">—</div>
+      </div>
+    </div>
+    <div class="log" id="log" style="display:none"></div>
+  </section>
+
+  <!-- ================================================= Verification ==== -->
+  <section class="card hidden" id="cardVerify">
+    <h3 data-i18n="section.verification">Verification</h3>
+
+    <div class="verdict insufficient" id="verdict">
+      <div class="verdict-label" id="verdictLabel"></div>
+      <div class="verdict-text" id="verdictText"></div>
+      <div class="verdict-note" id="verdictNote"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.apiUsage">API-reported Token Usage</div>
+        <div class="stat-value" id="vApiUsage">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.accountUsage">Account Usage Deduction</div>
+        <div class="stat-value" id="vAccountUsage">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.difference">Difference</div>
+        <div class="stat-value" id="vDifference">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.differenceRate">Discrepancy Rate</div>
+        <div class="stat-value" id="vRate">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.theoreticalCost">Theoretical Cost</div>
+        <div class="stat-value" id="vTheoryCost">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.actualCost">Actual Cost</div>
+        <div class="stat-value" id="vActualCost">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.costDifference">Cost Difference</div>
+        <div class="stat-value" id="vCostDiff">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label" data-i18n="verification.stability">Stability</div>
+        <div class="stat-value" id="vStability">—</div>
+      </div>
+    </div>
+
+    <div class="table-wrap hidden" id="roundsWrap" style="margin-top:16px">
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="verification.round">Round</th>
+            <th class="num" data-i18n="verification.apiUsage">API usage</th>
+            <th class="num" data-i18n="verification.accountUsage">Account usage</th>
+            <th class="num" data-i18n="verification.difference">Difference</th>
+            <th class="num" data-i18n="verification.differenceRate">Rate</th>
+          </tr>
+        </thead>
+        <tbody id="roundsBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====================================================== Report ===== -->
+  <section class="card">
+    <h3 data-i18n="section.report">Report</h3>
+    <div class="btn-group">
+      <button type="button" class="btn-ghost" id="btnViewReport" data-i18n="nav.report">Detailed Report</button>
+      <button type="button" class="btn-ghost" id="btnExportJSON" data-i18n="action.exportJSON">Export JSON</button>
+      <button type="button" class="btn-ghost" id="btnExportCSV" data-i18n="action.exportCSV">Export CSV</button>
+      <button type="button" class="btn-ghost" id="btnCopyReport" data-i18n="action.copyReport">Copy Report</button>
+    </div>
+    <div class="hint" id="reportStatus"></div>
+  </section>
+
+  <!-- =============================================== Per-request ======= -->
+  <section class="card hidden" id="cardRequests">
+    <h3 data-i18n="report.perRequest">Per-request detail</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>HTTP</th>
+            <th class="num" data-i18n="live.latency">Latency</th>
+            <th class="num">Prompt</th>
+            <th class="num">Completion</th>
+            <th class="num">Total</th>
+            <th data-i18n="units.unknown">Status</th>
+          </tr>
+        </thead>
+        <tbody id="requestsBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3 data-i18n="help.title">How this works</h3>
+    <p class="note" data-i18n="help.body"></p>
+    <p class="note" data-i18n="help.usageNote"></p>
+    <p class="note" data-i18n="help.verificationNote"></p>
+    <p class="note" data-i18n="help.neutralNote"></p>
+    <p class="note" data-i18n="help.securityNote"></p>
+  </section>
+
+  <footer class="footer">
+    <div>AI Relay Meter v0.1.0 · MIT License</div>
+    <div id="storageWarning" class="hidden" data-i18n="errors.storageUnavailable"></div>
+  </footer>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- Locale bundles: generated by `npm run build:locales`. Loaded as classic
+     scripts so the app also works from file:// inside an Android WebView. -->
+<script src="locales/en-US.js"></script>
+<script src="locales/zh-CN.js"></script>
+
+<!-- Core (no dependencies) -->
+<script src="src/js/core/usage.js"></script>
+<script src="src/js/core/mask.js"></script>
+<script src="src/js/core/errors.js"></script>
+<script src="src/js/core/diff.js"></script>
+<script src="src/js/core/stats.js"></script>
+
+<!-- Application modules -->
+<script src="src/js/i18n.js"></script>
+<script src="src/js/store.js"></script>
+<script src="src/js/api.js"></script>
+<script src="src/js/engine.js"></script>
+<script src="src/js/verify.js"></script>
+<script src="src/js/report.js"></script>
+<script src="src/js/app.js"></script>
+
+</body>
+</html>
